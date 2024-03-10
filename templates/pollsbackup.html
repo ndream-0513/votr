@@ -9,10 +9,16 @@
     <meta name="author" content="">
     <link rel="icon" href="http://getbootstrap.com/favicon.ico">
 
-    <title>Signup To Votr!</title>
+    <title>Create a poll</title>
 
     <!-- Bootstrap core CSS -->
     <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+
+    <!-- React JS -->
+    <script src="https://unpkg.com/react@15.3.2/dist/react.js"></script>
+    <script src="https://unpkg.com/react-dom@15.3.2/dist/react-dom.js"></script>
+    <script src="https://unpkg.com/babel-core@5.8.38/browser.min.js"></script>
+    <script type="text/babel" src="{{ url_for('static', filename='js/polls.js') }}"></script>
 
     <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
     <link href="{{ url_for('static', filename='css/ie10-viewport-bug-workaround.css') }}" rel="stylesheet">
@@ -28,24 +34,10 @@
 
     <div class="container">
 
-        <form class="form-signin" method="post" action="{{ url_for('signup') }}">
-        <h2 class="form-signin-heading" align="center">Sign up</h2>
-        <div class="form-group has-success">
-          <label for="email" class="sr-only">Email address</label>
-          <input type="email" id="email" name="email" class="form-control" placeholder="Email address" required autofocus>
-        </div>
+      <div id="form_container">
+        <!--Placeholder for poll creation form -->
 
-        <div class="form-group has-success">
-          <label for="username" class="sr-only">Username</label>
-          <input type="text" id="username" name="username" class="form-control" placeholder="Username" required autofocus>
-        </div>
-
-        <div class="form-group has-success">
-          <label for="password" class="sr-only">Password</label>
-          <input type="password" id="password" name="password" class="form-control" placeholder="Password" required>
-        </div>  
-        <button class="btn btn-lg btn-success btn-block" type="submit">Sign up</button>
-      </form>
+      </div>
 
     </div>
 

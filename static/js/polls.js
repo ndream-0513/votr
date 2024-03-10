@@ -100,5 +100,5 @@ ReactDOM.render(
   <div>
     <PollForm />
   </div>,
-  document.getElementById('form_container')
+  document.getElementById('container')
 );
