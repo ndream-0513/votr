@@ -97,7 +97,7 @@ def api_polls():
         options_query = lambda option : Options.query.filter(Options.name.like(option))
 
         options = [Polls(option=Options(name=option))
-                    if options_query(option).count == 0
+                    if options_query(option).count() == 0
                     else Polls(option=options_query(option).first()) for option in poll['options']
                     ]
 
