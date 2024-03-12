@@ -2,7 +2,7 @@ from flask import (
         Flask, render_template, request, flash, redirect, url_for, session, jsonify
         )
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, Users, Topics, Polls, Options
+from models import db, Users, Topics, Polls, Options, UserPolls
 from flask_migrate import Migrate
 
 votr = Flask(__name__)
@@ -10,8 +10,8 @@ votr = Flask(__name__)
 votr.config.from_object('config')
 
 db.init_app(votr)
-with votr.app_context():
-    db.create_all()
+#with votr.app_context():
+#    db.create_all()    # 只在第一次创建模型时使用，以后的模型更改都通过migrate完成
 
 migrate = Migrate(votr, db, render_as_batch=True)
 
@@ -23,12 +23,12 @@ def home():
 def signup():
     if request.method == 'POST':
 
-        # get the user details from the form         
+        # get the user details from the form
         email = request.form['email']
         username = request.form['username']
         password = request.form['password']
 
-        # hash the password         
+        # hash the password
         password = generate_password_hash(password)
 
         user = Users(email=email, username=username, password=password)
@@ -40,17 +40,17 @@ def signup():
 
         return redirect(url_for('home'))
 
-    # it's a GET request, just render the template     
+    # it's a GET request, just render the template
     return render_template('signup.html')
 
 @votr.route('/login', methods=['POST'])
 def login():
     # we don't need to check the request type as flask will raise a bad request
-    # error if a request aside from POST is made to this url 
+    # error if a request aside from POST is made to this url
     username = request.form['username']
     password = request.form['password']
 
-    # search the database for the User     
+    # search the database for the User
     user = Users.query.filter_by(username=username).first()
 
     if user:
@@ -62,7 +62,7 @@ def login():
 
             flash('Login was succesfull')
     else:
-        # user wasn't found in the database         
+        # user wasn't found in the database
         flash('Username or password is incorrect please try again', 'error')
 
     return redirect(url_for('home'))
@@ -85,10 +85,10 @@ def polls():
 # retrieves/adds polls from/to the database
 def api_polls():
     if request.method == 'POST':
-        # get the poll and save it in the database         
+        # get the poll and save it in the database
         poll = request.get_json()
 
-        # simple validation to check if all values are properly secret         
+        # simple validation to check if all values are properly secret
         for key, value in poll.items():
             if not value:
                 return jsonify({'error': 'value for {} is empty'.format(key)})
@@ -109,7 +109,7 @@ def api_polls():
         return jsonify({'message': 'Poll was created succesfully'})
 
     else:
-        # it's a GET request, return dict representations of the API         
+        # it's a GET request, return dict representations of the API
         polls = Topics.query.filter_by(status=1).join(Polls).order_by(Topics.id.desc()).all()
         all_polls = {'Polls':  [poll.to_json() for poll in polls]}
 
@@ -130,11 +130,25 @@ def api_poll_vote():
     poll_title, option = (poll['poll_title'], poll['option'])
 
     join_tables = Polls.query.join(Topics).join(Options)
-    # filter options     
+
+    # Get topic and username from the database
+    topic = Topics.query.filter_by(title=poll_title).first()
+    user = Users.query.filter_by(username=session['user']).first()
+
+    # filter options
     option = join_tables.filter(Topics.title.like(poll_title)).filter(Options.name.like(option)).first()
 
-    # increment vote_count by 1 if the option was found     
+    # check if the user has voted on this poll     
+    poll_count = UserPolls.query.filter_by(topic_id=topic.id).filter_by(user_id=user.id).count()
+    if poll_count > 0:
+        return jsonify({'message': 'Sorry! multiple votes are not allowed'})
+
     if option:
+        # record user and poll
+        user_poll = UserPolls(topic_id=topic.id, user_id=user.id)
+        db.session.add(user_poll)
+
+        # increment vote_count by 1 if the option was found
         option.vote_count += 1
         db.session.commit()
 
