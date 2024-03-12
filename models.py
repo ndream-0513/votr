@@ -1,6 +1,9 @@
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy import select, func
+
 # create a new SQLAlchemy object 
 db = SQLAlchemy()
 
@@ -30,7 +33,19 @@ class Topics(Base):
                 [{'name': option.option.name, 'vote_count': option.vote_count}
                     for option in self.options.all()],
             'status': self.status,
+            'total_vote_count': self.total_vote_count,
         }
+
+    @hybrid_property
+    def total_vote_count(self, total=0):
+        for option in self.options.all():
+            total += option.vote_count
+
+        return total
+
+    @total_vote_count.expression
+    def total_vote_count(cls):
+        return select([func.sum(Polls.vote_count)]).where(Polls.topic_id == cls.id)
 
 # Model for poll options 
 class Options(Base):
