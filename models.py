@@ -43,9 +43,11 @@ class Topics(Base):
 
         return total
 
+    '''
     @total_vote_count.expression
     def total_vote_count(cls):
         return select([func.sum(Polls.vote_count)]).where(Polls.topic_id == cls.id)
+    '''
 
 # Model for poll options 
 class Options(Base):

@@ -5,6 +5,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, Users, Topics, Polls, Options, UserPolls
 from flask_migrate import Migrate
 
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
+from admin import AdminView, TopicView
+
 votr = Flask(__name__)
 
 votr.config.from_object('config')
@@ -14,6 +18,11 @@ db.init_app(votr)
 #    db.create_all()    # 只在第一次创建模型时使用，以后的模型更改都通过migrate完成
 
 migrate = Migrate(votr, db, render_as_batch=True)
+
+admin = Admin(votr, name='Dashboard', index_view=TopicView(Topics, db.session, url='/admin', endpoint='admin'))
+admin.add_view(AdminView(Users, db.session))
+admin.add_view(AdminView(Polls, db.session))
+admin.add_view(AdminView(Options, db.session))
 
 @votr.route('/')
 def home():
