@@ -1,5 +1,7 @@
 from models import db, Users, Polls, Topics, Options, UserPolls
 from flask import Blueprint, request, jsonify, session
+from datetime import datetime
+
 
 api = Blueprint('api', 'api', url_prefix='/api')
 
@@ -9,6 +11,7 @@ def api_polls():
     if request.method == 'POST':
         # get the poll and save it in the database
         poll = request.get_json()
+        print(poll)
 
         # simple validation to check if all values are properly secret
         for key, value in poll.items():
@@ -22,11 +25,18 @@ def api_polls():
                     if options_query(option).count() == 0
                     else Polls(option=options_query(option).first()) for option in poll['options']
                     ]
+        # 使用eta参数指定时间
+        eta = datetime.utcfromtimestamp(poll['close_date'])
 
-        new_topic = Topics(title=title, options=options)
+        new_topic = Topics(title=title, options=options, close_date=eta)
 
         db.session.add(new_topic)
         db.session.commit()
+
+        from tasks import close_poll
+
+        # 通过调用apply_async方法将任务发送给Celery
+        close_poll.apply_async((new_topic.id,), eta=eta)
 
         return jsonify({'message': 'Poll was created succesfully'})
 

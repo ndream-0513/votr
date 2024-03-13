@@ -8,6 +8,9 @@ from flask_migrate import Migrate
 from flask_admin import Admin
 from admin import AdminView, TopicView
 
+import config
+from celery import Celery
+
 # blueprints
 from api.api import api
 
@@ -27,6 +30,24 @@ admin = Admin(votr, name='Dashboard', index_view=TopicView(Topics, db.session, u
 admin.add_view(AdminView(Users, db.session))
 admin.add_view(AdminView(Polls, db.session))
 admin.add_view(AdminView(Options, db.session))
+
+def make_celery(app):
+    celery = Celery(app.import_name, broker=config.CELERY_BROKER)
+    celery.conf.update(votr.config)
+    TaskBase = celery.Task
+
+    class ContextTask(TaskBase):
+        abstract = True
+
+        def __call__(self, *args, **kwargs):
+            with votr.app_context():
+                return TaskBase.__call__(self, *args, **kwargs)
+
+    celery.Task = ContextTask
+
+    return celery
+# create celery object
+celery = make_celery(votr)
 
 @votr.route('/')
 def home():

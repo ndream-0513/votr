@@ -1,4 +1,16 @@
 // css style to align text to the center of it's container
+// top level import
+try {
+    var SimpleTimePicker = ReactSimpleTimePicker.SimpleTimePicker;
+} catch(err) {
+    console.log(err);
+}
+
+var Timeleft = {
+    color: '#999',
+    fontSize: '15px',
+}
+
 var Router = ReactRouter.Router;
 var Route = ReactRouter.Route;
 var browserHistory = ReactRouter.browserHistory;
@@ -38,10 +50,25 @@ var LivePreviewProps = React.createClass({
 
     render: function(){
         var polls = this.props.polls.Polls.map(function(poll){
+            var minutes = Math.floor((Date.parse(poll.close_date) - Date.now()) / (60000));
+            var time_remaining = '';
+
+            if (minutes >= 1440) {
+                var days = Math.floor(minutes / 1440);
+                time_remaining += days + ' days remaining.';
+            } else if (minutes < 1440 && minutes > 59) {
+                var hours = Math.floor(minutes / 60);
+                time_remaining += hours + ' hours remaining.';
+            } else if (minutes <= 0) {  // 使用/api/polls/<poll_name>时有可能得到失效的投票，此时的minutes为负
+                time_remaining += "This poll is expired";
+            } else {
+                time_remaining += minutes + ' minutes remaining.';
+            }
+
             return (
                 <LivePreview key={poll.title} title={poll.title} options={poll.options}
                 total_vote_count={poll.total_vote_count} voteHandler={this.voteHandler}
-                classContext={this.props.classContext} /> 
+                close_date={time_remaining} classContext={this.props.classContext} /> 
             );
         }.bind(this));
 
@@ -116,7 +143,20 @@ var PollForm = React.createClass({
 
     getInitialState: function(){
         // set initial state of form inputs
-        return {title: '', option: '', options: [], all_options: []}
+
+        // close poll in 24 hours by default
+        var close_date = new Date();
+        close_date.setHours(close_date.getHours() + 24);
+        close_date = close_date.getTime() / 1000;
+
+        return {title: '', option: '', options: [], close_date: close_date, all_options: []}
+    },
+
+    onDateChange: function(e){
+        // convert date to UTC timestamp in seconds
+        var close_date = e.getTime() / 1000
+
+        this.setState({close_date: close_date})
     },
 
     handleTitleChange: function(e){
@@ -136,32 +176,35 @@ var PollForm = React.createClass({
         });
     },
 
-  componentDidMount: function(){
+    componentDidMount: function(){
 
-    var url =  origin + '/api/polls/options'
+        var url =  origin + '/api/polls/options'
 
-    //get all options
-    $.ajax({
-      url: url,
-      dataType: 'json',
-      cache: false,
-      success: function(data) {
-        console.log(data);
-        this.setState({all_options: data});
-      }.bind(this),
-      error: function(xhr, status, err) {
-        console.error(url, status, err.toString());
-      }.bind(this)
-    });
+        //get all options
+        $.ajax({
+            url: url,
+            dataType: 'json',
+            cache: false,
+            success: function(data) {
+                console.log(data);
+                this.setState({all_options: data});
+            }.bind(this),
+            error: function(xhr, status, err) {
+                console.error(url, status, err.toString());
+            }.bind(this)
+        });
 
-  },
+    },
 
     handleSubmit: function(e){
         e.preventDefault();
         var title = this.state.title;
         var options = this.state.options;
+        var close_date = this.state.close_date;
 
-        var data = {'title': title, options: options.map(function(x){return x.name})};
+        var data = {title: title,
+            options: options.map(function(x){return x.name}),
+            close_date: close_date};
         var url =  origin + '/api/polls';
 
         // make post request
@@ -184,9 +227,9 @@ var PollForm = React.createClass({
 
         var classContext = "col-sm-6 col-sm-offset-3"
 
-    var all_options = this.state.all_options.map(function(option){
-                        return(<option key={option.id} value={option.name} />) 
-                      });
+        var all_options = this.state.all_options.map(function(option){
+            return(<option key={option.id} value={option.name} />) 
+        });
 
         return (
             <div>
@@ -205,6 +248,9 @@ var PollForm = React.createClass({
             </div>
 
             <datalist id="option">{all_options}</datalist>
+
+            <SimpleTimePicker days="7" onChange={this.onDateChange} />
+            <br />
 
             <div className="row form-group">
             <button className="btn btn-lg btn-success btn-block" type="button" onClick={this.handleOptionAdd}>Add option</button>
@@ -282,7 +328,8 @@ var LivePreview = React.createClass({
             {options}
             <br />
             <button type="submit" disabled={this.state.disabled} className="btn btn-success btn-outline hvr-grow">Vote!</button>
-            <small>&nbsp;{this.props.total_vote_count} votes so far.</small>
+            <small>&nbsp;{this.props.total_vote_count} votes so far</small>
+            <small style={Timeleft}> | {this.props.close_date} </small>
             </form>
             </div>
             </div>

@@ -20,6 +20,7 @@ class Base(db.Model):
 class Topics(Base):
     title = db.Column(db.String(500))
     status = db.Column(db.Boolean, default=1)
+    close_date = db.Column(db.DateTime)
 
     # user friendly way to display the object     
     def __repr__(self):
@@ -32,6 +33,7 @@ class Topics(Base):
             'options':
                 [{'name': option.option.name, 'vote_count': option.vote_count}
                     for option in self.options.all()],
+            'close_date': self.close_date,
             'status': self.status,
             'total_vote_count': self.total_vote_count,
         }
